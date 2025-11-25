@@ -9,7 +9,7 @@ env:
   TZ: Asia/Shanghai
 
 jobs:
-  blog-cicd:
+  ci/cd:
     name: build & deploy
     runs-on: ubuntu-latest # 使用最新的 Ubuntu 系统作为编译部署的环境
 
@@ -25,7 +25,7 @@ jobs:
 
     - name: Cache node modules
       # 设置包缓存目录，避免每次下载
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.npm
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
