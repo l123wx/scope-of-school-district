@@ -2,48 +2,63 @@ name: CI/CD
 
 on:
   push:
-    branches: 
+    branches:
       - master
 
 env:
   TZ: Asia/Shanghai
 
 jobs:
-  cicd:
-    name: build & deploy
-    runs-on: ubuntu-latest # 使用最新的 Ubuntu 系统作为编译部署的环境
+  build:
+    name: build
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout codes
-      uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-    - name: Setup node
-      # 设置 node.js 环境
-      uses: actions/setup-node@v1
-      with:
-        node-version: '18.x'
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
 
-    - name: Cache node modules
-      # 设置包缓存目录，避免每次下载
-      uses: actions/cache@v3
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      - name: Enable Corepack
+        run: corepack enable
 
-    - name: Install dependencies
-      # 下载 hexo-cli 脚手架及相关安装包
-      run: |
-        npm install
-        npm run build
+      - name: Install ni
+        run: npm i -g @antfu/ni@latest
 
-    - name: Deploy
-      env: 
-        # Github 仓库
-        GITHUB_REPO: github.com/l123wx/lottie-demo
-      run: |
-        cd ./dist && git init && git add .
-        git config user.name "l123wx"
-        git config user.email "1219585136@qq.com"
-        git add .
-        git commit -m "GitHub Actions Auto Builder at $(date +'%Y-%m-%d %H:%M:%S')"
-        git push --force --quiet "https://${{ secrets.ACCESS_TOKEN }}@$GITHUB_REPO" master:website
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.json') }}
+
+      - name: Install dependencies
+        run: ni
+
+      - name: Build
+        run: nr build
+
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./dist
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    name: deploy github pages
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
