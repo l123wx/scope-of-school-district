@@ -8,3 +8,6 @@
  - 地图api：天地图
  - 组件库：element-plus
 
+预览：
+
+![img](./public/example.png)
